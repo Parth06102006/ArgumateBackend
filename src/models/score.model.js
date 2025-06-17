@@ -4,6 +4,7 @@ const scoreSchema = new Schema
 (
     {
         user:{type:mongoose.Schema.Types.ObjectId,ref:'User',required:true},
+        debate:{type:mongoose.Schema.Types.ObjectId,ref:'Debate',required:true},
         argumentQuality: { type: Number, min: 0, max: 10 },
         rebuttalStrength: { type: Number, min: 0, max: 10 },
         engagementWithPOIs: { type: Number, min: 0, max: 5 },

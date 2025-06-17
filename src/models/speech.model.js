@@ -21,10 +21,13 @@ const speechScehma = new Schema
             }
         ],
         pois:[
+        
             {
-                from:{type:String,enum:['user','ai']},
-                role:{type:String,required:true},
-                message:String,
+                from:{by:{type:String,enum:['user','ai']},role:{type:String}},
+                to:{by:{type:String,enum:['user','ai']},role:{type:String}},
+                question:String,
+                answer:String,
+                answered:{type:Boolean,default:false}
             }
         ],
     },

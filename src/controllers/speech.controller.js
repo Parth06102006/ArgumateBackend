@@ -34,7 +34,7 @@ const createSpeech = asyncHandler(async(req,res)=>
         
     }
 
-    if(!existingSpeech)
+    if(!speech)
     {
         speech = await Speech.create({user:userId,debate:debateId,speeches:[by,role,content]})
     }
@@ -52,4 +52,102 @@ const createSpeech = asyncHandler(async(req,res)=>
         });
 
     return res.status(200).json(new ApiResponse(200,'Speech Created Successfully',speech))
+})
+
+const createPoiQues = asyncHandler(async(req,res)=>
+{
+    const userId = req.user;
+    const debateId = req.params.id;
+    const {question,roleFrom,roleTo,sender,receiver}= req.body;
+
+    const existingDebate = await Debate.findById(debateId);
+    if(!existingDebate)
+    {
+        throw new ApiError(400,'No Debate exisits')
+    }
+
+    const roomId = existingDebate.roomId
+
+    if([question,roleFrom,roleTo,sender,receiver].some(t=>t.trim()===''))
+    {
+        throw new ApiError(403,'Details are missing')
+    }
+
+    let speech = await Speech.findOne({user:userId,debate:debateId});
+
+    if(!speech)
+    {
+        throw new ApiError(400,'No Speech Found')
+    }
+
+    //api to call ai to generate the poi
+    if(by==='ai')
+    {
+        const response = await axios.post();
+        
+    }
+    let from = {by:sender,role:roleFrom}
+    let to = {by:receiver,role:roleTo}
+
+    speech.pois.push({from,to,question})
+    await speech.save()
+
+    return res.status(200).json(new ApiResponse(200,'POI Created Successfully',speech))
+})
+
+const createPoiAns = asyncHandler(async(req,res)=>
+{
+    const userId = req.user;
+    const debateId = req.params.id;
+    const {answer,roleFrom,roleTo,sender,receiver}= req.body;
+
+    const existingDebate = await Debate.findById(debateId);
+    if(!existingDebate)
+    {
+        throw new ApiError(400,'No Debate exisits')
+    }
+
+    const roomId = existingDebate.roomId
+
+    if([answer,roleFrom,roleTo,sender,receiver].some(t=>t.trim()===''))
+    {
+        throw new ApiError(403,'Details are missing')
+    }
+
+    let speech = await Speech.findOne({user:userId,debate:debateId});
+
+    if(!speech)
+    {
+        throw new ApiError(400,'No Speech Found')
+    }
+
+    //api to call ai to generate the poi
+    if(by==='ai')
+    {
+        const response = await axios.post();
+        
+    }
+    let from = {by:sender,role:roleFrom}
+    let to = {by:receiver,role:roleTo}
+
+    let poi = speech.pois.find(p=> p.from.by === sender && p.to.by === receiver && !p.answered)
+    if(!poi)
+    {
+        throw new ApiError('No Poi Found')
+    }
+
+    poi.answer = answer
+    poi.answered = true
+
+    await speech.save()
+
+
+    io.to(roomId).emit('new_poi_ans',
+        {
+            from,
+            to,
+            answer,
+        });
+
+    return res.status(200).json(new ApiResponse(200,'POI Answered Successfully',speech))
 })
