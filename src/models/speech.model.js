@@ -8,15 +8,22 @@ const speechScehma = new Schema
             ref:'User',
             required:true
         },
+        debate:{
+            type:mongoose.Schema.Types.ObjectId,
+            ref:'Debate',
+            required:true
+        },
         speeches:[
             {
-                by:{type:String,enum:['user','ai']},
+                by:{type:String,enum:['user','ai'],required:true},
+                role:{type:String,required:true},
                 content:String,
             }
         ],
         pois:[
             {
                 from:{type:String,enum:['user','ai']},
+                role:{type:String,required:true},
                 message:String,
             }
         ],

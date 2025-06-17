@@ -25,13 +25,16 @@ const debateSchema = new Schema(
         },
         level:{
             type:String,
-            enum:['Beginner','Intermediate','Advanced']
-        },
-        role:
-        {
-            type:String,
+            enum:['Beginner','Intermediate','Advanced'],
             required:true
         },
+        roles:
+        [
+            {   
+                by:{type:String,enum:['user','ai'],required:true},
+                role:{type:String,required:true},
+            }
+        ],
     },
     {timestamps:true}
 )

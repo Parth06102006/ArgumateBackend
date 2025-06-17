@@ -17,15 +17,29 @@ const PORT = process.env.PORT || 3000
 const io = new Server(server);
 
 io.on('connection',(socket)=>{
-    console.log('a user connected')
+    console.log('a user connected');
+
+    socket.on('join_room',(roomId)=>
+        {
+            socket.join(roomId,()=>
+            {
+                console.log('user joined the room',roomId)
+            })
+        })
+
+    socket.on('disconnect',()=>
+    {
+        console.log('user disconnected')
+    })
 })
 app.use(express.json())
 app.use(cors())
 app.use(cookieParser())
 
 app.use('/api/v1',userRouter);
-
 app.use(errorHandling)
+
+export {io}
 
 dbConnect()
 .then(()=>{
