@@ -4,6 +4,7 @@ import { dbConnect } from './db/db.js';
 import {createServer} from 'http'
 import userRouter from './routes/user.route.js'
 import debateRouter from './routes/debate.route.js'
+import speechRouter from './routes/speech.route.js'
 import { errorHandling } from './middlewares/error.middleware.js';
 import dotenv from 'dotenv'
 import cors from 'cors'
@@ -44,6 +45,7 @@ app.use(cookieParser())
 
 app.use('/api/v1',userRouter);
 app.use('/api/v1',debateRouter);
+app.use('/api/v1',speechRouter);
 app.use(errorHandling)
 
 export {io}

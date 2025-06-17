@@ -124,9 +124,9 @@ const createPoiAns = asyncHandler(async(req,res)=>
     //api to call ai to generate the poi
     if(by==='ai')
     {
-        const response = await axios.post();
-        
+        const response = await axios.post();   
     }
+    
     let from = {by:sender,role:roleFrom}
     let to = {by:receiver,role:roleTo}
 
@@ -151,3 +151,5 @@ const createPoiAns = asyncHandler(async(req,res)=>
 
     return res.status(200).json(new ApiResponse(200,'POI Answered Successfully',speech))
 })
+
+export {createSpeech,createPoiQues,createPoiAns};
