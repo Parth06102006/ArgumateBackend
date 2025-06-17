@@ -17,12 +17,12 @@ function roleGenerator(format,chosenRole)
         if(role===chosenRole)
         {
             roleObj.by  = 'user';
-            roleObj.role = role
+            roleObj.role = allRoles[role]
         }
         else
         {
             roleObj.by  = 'ai';
-            roleObj.role = role
+            roleObj.role = allRoles[role]
         }
         roles.push(roleObj)
     }

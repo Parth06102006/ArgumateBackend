@@ -5,7 +5,7 @@ import { User } from "../models/user.model.js";
 
 const authHandling = asyncHandler(async(req,res,next)=>
 {
-    const token = req.cookies.token || req.header('Authorization').replace('Bearer ','') || req.body.token;
+    const token = req.cookies.token || req.body.token || req.header('Authorization').replace('Bearer','');
 
     if(!token)
     {
@@ -24,7 +24,7 @@ const authHandling = asyncHandler(async(req,res,next)=>
         throw new ApiError(403,'No User Found')
     }
 
-    res.user = user._id;
+    req.user = user._id;
     next()
 })
 

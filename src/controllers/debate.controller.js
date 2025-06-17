@@ -9,12 +9,16 @@ import jwt from 'jsonwebtoken'
 const debateCreation = asyncHandler(async(req,res)=>
 {
     const userId = req.user;
+    console.log(userId)
+    console.log(1)
     const {topic,format,level,role} = req.body;
     if([topic,format,level,role].some(t=>t?.trim() === ''))
     {
         throw new ApiError(400,'Enter all the details');
     }
+    console.log(2)
     const roles = roleGenerator(format,role);
+    console.log(3)
     try {
         const newDebate = await Debate.create({user:userId,topic,format,level,roles});
 
@@ -23,7 +27,7 @@ const debateCreation = asyncHandler(async(req,res)=>
             throw new ApiError(400,'Error creating new Debate');
         }
 
-        let roomId = newDebate._id.slice(0,5);
+        let roomId = newDebate._id.toString().slice(0,5);
         newDebate.roomId = roomId;
         await newDebate.save();
         
@@ -35,3 +39,4 @@ const debateCreation = asyncHandler(async(req,res)=>
     }
 })
 
+export {debateCreation}
