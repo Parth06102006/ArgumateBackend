@@ -32,6 +32,13 @@
 
 ---
 
+🔗 API Documentation
+
+You can explore and test the available API endpoints using our shared Postman Collection:
+
+👉 [Click here to view the Postman Collection](https://web.postman.co/workspace/My-Workspace~538649de-b637-4c17-809a-7b9aef500a67/collection/41274135-5070144e-c727-45af-8703-ff1cea3abf4c?action=share&source=copy-link&creator=41274135)
+
+
 ## 🧠 AI Capabilities Implemented
 
 - Argument mining: Identifying claims, evidence, rebuttals
