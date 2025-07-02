@@ -484,8 +484,8 @@ const topicClassifcation = asyncHandler(async(req,res)=>
 
     let speech = await Speech.findOne({user:userId,debate:debateId});
     let topic='';
-    const latestUserSpeech = speech.speeches.filter(s => s.by === 'user').at(-1)?.content;
-    if(!latestUserSpeech)
+    const latestSpeech = speech.speeches.at(-1)?.content;
+    if(!latestSpeech)
       {
         throw new ApiError(404,'User speech is not present')
       }
@@ -495,7 +495,7 @@ const topicClassifcation = asyncHandler(async(req,res)=>
       const postResponse = await axios.post(
         "https://piyush2205-topic-classification.hf.space/gradio_api/call/predict",
         {
-          data: [latestUserSpeech],
+          data: [latestSpeech],
         },
         {
           headers: {
