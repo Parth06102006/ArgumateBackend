@@ -60,10 +60,7 @@ export {io}
 
 dbConnect()
 .then(()=>{
-    if(process.env.NODE_ENV!=='production')
-    {
-        server.listen(PORT,()=>{console.log(`Server is listening at the ${PORT}`)})
-    }
+     server.listen(PORT,()=>{console.log(`Server is listening at the ${PORT}`)})
 })
 .catch(()=>{
     console.log('Something went wrong')
