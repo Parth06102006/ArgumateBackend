@@ -23,12 +23,12 @@ const signup = asyncHandler(async(req,res)=>{
     // console.log(3)
 
     try {
-        const newUser = await User.create({username,email,password:hashedPassword});
+        const newUser = (await User.create({username,email,password:hashedPassword}));
         if(!newUser)
         {
             throw new ApiError(500,'User cannot be signed up')
         }
-        return res.status(201).json(new ApiResponse(201,'User signed up successfully',{user:newUser}))
+        return res.status(201).json(new ApiResponse(201,'User signed up successfully',{username:newUser.username , email:newUser.email}))
     } catch (error) {
         console.error(error)
         console.log('here')
@@ -60,12 +60,12 @@ const login = asyncHandler(async(req,res)=>{
 
     //generate the token
     const token = existingUser.generateToken();
-
+    const isProd = process.env.NODE_ENV === 'production'
     const options = 
     {
         httpOnly:true,
-        secure:false,
-        sameSite:'lax',
+        secure:isProd,
+        sameSite:isProd ? 'none':'lax',
         expires: new Date(Date.now() + 3*24*60*60*100)
     }
     console.log(token)

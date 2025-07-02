@@ -43,7 +43,11 @@ io.on('connection',(socket)=>{
     })
 })
 app.use(express.json())
-app.use(cors({origin:'http://127.0.0.1:5500',secure:false,credentials:true,methods: ['GET', 'POST', 'PUT', 'DELETE'],allowedHeaders: ['Content-Type', 'Authorization']}))
+app.use(cors({origin:process.env.FRONTEND_URL,
+    credentials:true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}))
 app.use(express.urlencoded({extended:true}))
 app.use(cookieParser())
 
@@ -56,7 +60,10 @@ export {io}
 
 dbConnect()
 .then(()=>{
-    server.listen(PORT,()=>{console.log(`Server is listening at the ${PORT}`)})
+    if(process.env.NODE_ENV!=='production')
+    {
+        server.listen(PORT,()=>{console.log(`Server is listening at the ${PORT}`)})
+    }
 })
 .catch(()=>{
     console.log('Something went wrong')
