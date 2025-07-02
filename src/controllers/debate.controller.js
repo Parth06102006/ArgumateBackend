@@ -1,10 +1,8 @@
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { User } from "../models/user.model.js";
 import {Debate} from "../models/debate.model.js";
 import { roleGenerator } from "../utils/roleGenerated.js";
-import jwt from 'jsonwebtoken'
 
 const debateCreation = asyncHandler(async(req,res)=>
 {
@@ -20,15 +18,14 @@ const debateCreation = asyncHandler(async(req,res)=>
     const roles = roleGenerator(format,role);
     console.log(3)
     try {
-        const newDebate = await Debate.create({user:userId,topic,format,level,roles});
-
+        const roomId = userId.toString().slice(0,5)
+        const newDebate = await Debate.create({user:userId,topic,format,level,roles,roomId});
+        console.log(4)
         if(!newDebate)
         {
             throw new ApiError(400,'Error creating new Debate');
         }
-
-        let roomId = newDebate._id.toString().slice(0,5);
-        newDebate.roomId = roomId;
+        console.log(newDebate)
         await newDebate.save();
         
         return res.status(200).json(new ApiResponse(200,'New Debate Initiated',{debate:newDebate}));

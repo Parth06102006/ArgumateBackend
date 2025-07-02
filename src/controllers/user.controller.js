@@ -38,6 +38,8 @@ const signup = asyncHandler(async(req,res)=>{
 
 const login = asyncHandler(async(req,res)=>{
     const {email,password} = req.body;
+    console.log(email)
+    console.log(password)
     if(!email||!password)
     {
         throw new ApiError(401,'Details not filled');
@@ -62,9 +64,11 @@ const login = asyncHandler(async(req,res)=>{
     const options = 
     {
         httpOnly:true,
+        secure:false,
+        sameSite:'lax',
         expires: new Date(Date.now() + 3*24*60*60*100)
     }
-
+    console.log(token)
     return res.status(200).cookie('token',token,options).json(new ApiResponse(200,'User Logged in Successfully'))
 })
 

@@ -5,12 +5,18 @@ import {Debate} from "../models/debate.model.js";
 import {Speech} from "../models/speech.model.js"
 import { io } from "../server.js";
 import axios from "axios";
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegPath from 'ffmpeg-static';
+import fs from 'fs-extra'
+import {GoogleGenAI} from '@google/genai'
+
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const createSpeech = asyncHandler(async(req,res)=>
 {
     const userId = req.user;
     const debateId = req.params.id;
-    const {content,role,by} = req.body;
+    let {content,role,by} = req.body;
 
     const existingDebate = await Debate.findById(debateId);
     if(!existingDebate)
@@ -26,33 +32,168 @@ const createSpeech = asyncHandler(async(req,res)=>
     }
 
     let speech = await Speech.findOne({user:userId,debate:debateId});
-
-    //api to call ai to generate the speech
+    let topic='';
     if(by==='ai')
     {
-        const response = await axios.post();
-        
-    }
-
-    if(!speech)
+    try {
+    // const motion = speech.speeches.at(-1)?.content;
+    const motion = existingDebate.topic;
+    const lastResponse = speech.speeches.at(-1)
+    const prevRole = lastResponse.role;
+    const prevMessage = lastResponse.content
+    const format = existingDebate.format;
+    if(!motion)
     {
-        speech = await Speech.create({user:userId,debate:debateId,speeches:[by,role,content]})
+      throw new ApiError(400,'Motion Not Found')
+    }
+    const isOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(role);
+    const prevIsOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(prevRole);
+    const sameSide = isOpposition === prevIsOpposition;
+
+    let stance = '';
+    isOpposition ? stance='opposing' : stance = 'supporting'
+    let prompt = ''
+
+    if(sameSide)
+    {
+      prompt = `
+        You are an AI participating in a ${format} Parliamentary Debate.
+
+        Debate Motion: "${motion}"
+        Your Role: ${role} (${stance} the motion)
+
+        Previous Speaker: ${prevRole}
+        Their Argument: "${prevMessage}"
+
+        Instructions:
+        You are on the same side as the previous speaker. Build upon and extend their argument in a persuasive 50-word speech.
+        - Deepen the logic or add a new dimension.
+        - Reinforce your side’s stance (${stance} the motion).
+        - Maintain the tone and strategy of your role (${role}).
+        - End with an impactful call or thought.
+        `;
+
+    }
+    else
+    {
+      prompt = `
+          You are an AI participating in a ${format} Parliamentary Debate.
+
+          Debate Motion: "${motion}"
+          Your Role: ${role} (${stance} the motion)
+
+          Previous Speaker: ${prevRole}
+          Their Argument: "${prevMessage}"
+
+          Instructions:
+          Respond to the previous speaker from the opposite bench. Write a persuasive, 50-word rebuttal speech.
+          - Refute key claims.
+          - Present your side's perspective (${stance} the motion).
+          - Stay formal, sharp, and role-specific.
+          - End with a strong closing line or rhetorical question.`;
+    }
+      console.log(prompt)
+    /* const response = await axios.post('https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta',{ inputs: prompt , motion ,role},
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
+          'Content-Type': "application/json"
+        }
+      }
+    );
+    console.log(response)
+    const resp2 = response.data[0]?.generated_text || "(No response)";
+    console.log(resp2) */
+    const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});
+    const response = await client.models.generateContent({
+      model:'gemini-2.5-flash',
+      contents:prompt
+    })
+    console.log(response.text)
+    content = response.text
+  }
+  catch(error)
+  {
+    throw new ApiError(400,'Cannot generate Content')
+  }
+}
+   if(!speech)
+    {
+        speech = await Speech.create({user:userId,debate:debateId,speeches:[{by,role,content}]})
     }
     else
     {
         speech.speeches.push({by,role,content});
-        await existingSpeech.save()
+        await speech.save()
     }
 
-    io.to(roomId).emit('new_speech',
+    /*io.to(roomId).emit('new_speech',
         {
             by,
             role,
             content
-        });
+        }); */
 
     return res.status(200).json(new ApiResponse(200,'Speech Created Successfully',speech))
 })
+
+export const voiceToText = asyncHandler(async (req, res) => {
+  try {
+    const filePath = req.file.path;
+    const apiKey = process.env.SPEECH_TO_TEXT_API_KEY;
+
+    // 1. Upload the audio to AssemblyAI
+    const uploadResponse = await axios({
+      method: "post",
+      url: "https://api.assemblyai.com/v2/upload",
+      headers: {
+        authorization: apiKey,
+        "Transfer-Encoding": "chunked", // required
+      },
+      data: fs.createReadStream(filePath),
+    });
+
+    const audioUrl = uploadResponse.data.upload_url;
+    console.log("Audio uploaded:", audioUrl);
+
+    // 2. Send for transcription
+    const response = await axios.post(
+      "https://api.assemblyai.com/v2/transcript",
+      {
+        audio_url: audioUrl,
+        speech_model: "universal",
+      },
+      {
+        headers: {
+          authorization: apiKey,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    console.log(response)
+    const transcriptId = response.data.id;
+    const pollingEndpoint = `https://api.assemblyai.com/v2/transcript/${transcriptId}`;
+
+    // 3. Poll until complete
+    while (true) {
+      const pollingRes = await axios.get(pollingEndpoint, {
+        headers: { authorization: apiKey },
+      });
+
+      if (pollingRes.data.status === "completed") {
+        fs.unlinkSync(filePath); // delete temp file
+        return res.status(200).json({ transcription: pollingRes.data.text });
+      } else if (pollingRes.data.status === "error") {
+        throw new Error("Transcription failed: " + pollingRes.data.error);
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 3000)); // wait 3s
+      }
+    }
+  } catch (err) {
+    console.error("Transcription error:", err.message);
+    return res.status(500).json({ error: "Failed to transcribe audio." });
+  }
+});
 
 const createPoiQues = asyncHandler(async(req,res)=>
 {
@@ -150,6 +291,95 @@ const createPoiAns = asyncHandler(async(req,res)=>
         });
 
     return res.status(200).json(new ApiResponse(200,'POI Answered Successfully',speech))
+}) 
+
+export const conclusion = asyncHandler(async(req,res)=>{
+  const {data} = req.body;
+  console.log(data)
+  const response = await fetch(
+		"https://router.huggingface.co/hf-inference/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+		{
+			headers: {
+				Authorization: `Bearer ${process.env.HF_TOKEN}`,
+				"Content-Type": "application/json",
+			},
+			method: "POST",
+			body: JSON.stringify({ inputs: data }),
+		}
+	);
+	const result = await response.json();
+  console.log(result)
+  let emotion = ''
+  if (Array.isArray(result) && result[0]?.[0]?.label) {
+    const label1 = result[0][0].label;
+    const score1 = result[0][0].score;
+    const label2 = result[0][1]?.label || '';
+    const score2 = result[0][1]?.score || 0;
+
+    if (label1 === 'NEGATIVE' && score1 > score2) {
+      emotion = 'NEGATIVE';
+    } else {
+      emotion = 'POSITIVE';
+    }
+  } else {
+    emotion = 'UNKNOWN';
+  }
+	return res.json(new ApiResponse(200,'Sentimental Analysis Completed',{result:emotion}));
+})
+
+export const topicClassifcation = asyncHandler(async(req,res)=>
+{
+    const userId = req.user;
+    const debateId = req.params.id;
+
+    const existingDebate = await Debate.findById(debateId);
+    if(!existingDebate)
+    {
+        throw new ApiError(400,'No Debate exisits')
+    }
+
+    let speech = await Speech.findOne({user:userId,debate:debateId});
+    let topic='';
+    const latestUserSpeech = speech.speeches.filter(s => s.by === 'user').at(-1)?.content;
+    if(!latestUserSpeech)
+      {
+        throw new ApiError(404,'User speech is not present')
+      }
+    // Step 1: POST to get the hash (job ID)
+    
+    try {
+      const postResponse = await axios.post(
+        "https://piyush2205-topic-classification.hf.space/gradio_api/call/predict",
+        {
+          data: [latestUserSpeech],
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      const hash = await postResponse.data['event_id'];
+      console.log("🆔 Job Hash:", hash);
+  
+      // Step 2: Poll GET to get result
+      const getUrl = `https://piyush2205-topic-classification.hf.space/gradio_api/call/predict/${hash}`;
+      const getResponse = await axios.get(getUrl);
+      console.log("✅ Prediction:", getResponse.data);
+      const text = getResponse.data 
+      console.log(text)
+      const match = text.match(/Topic:\s*(.+?)\s*\(Confidence:/);
+      console.log(match)
+      if (match && match[1]) {
+        topic = match[1]; // "technology"
+        return res.status(200).json(new ApiResponse(200,'Topic Classification Successfull',{topic}))
+      } else {
+        throw new ApiError(400,'Topic Cannot be found')
+      }
+    } catch (error) {
+      throw new ApiError(400,'Topic Classification Unsuccessfull')
+    }
 })
 
 export {createSpeech,createPoiQues,createPoiAns};

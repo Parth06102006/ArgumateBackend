@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { urlencoded } from 'express'
 import { Server } from 'socket.io'
 import { dbConnect } from './db/db.js';
 import {createServer} from 'http'
@@ -19,7 +19,9 @@ const PORT = process.env.PORT || 3000
 const io = new Server(server,
     {
         cors:{
-        origin:'http://127.0.0.1:5500',
+        origin:'http://127.0.0.1:5500/',
+        credentials:true
+
     }
 }
 );
@@ -40,14 +42,14 @@ io.on('connection',(socket)=>{
     })
 })
 app.use(express.json())
-app.use(cors({origin:'http://127.0.0.1:5500',secure:true}))
+app.use(cors({origin:'http://127.0.0.1:5500',secure:false,credentials:true,methods: ['GET', 'POST', 'PUT', 'DELETE'],allowedHeaders: ['Content-Type', 'Authorization']}))
+app.use(express.urlencoded({extended:true}))
 app.use(cookieParser())
 
 app.use('/api/v1',userRouter);
 app.use('/api/v1',debateRouter);
 app.use('/api/v1',speechRouter);
 app.use(errorHandling)
-
 export {io}
 
 dbConnect()

@@ -9,7 +9,6 @@ const debateSchema = new Schema(
         },
         roomId:{
             type:String,
-            unique:true,
             trim:true,
         },
         topic:{
@@ -20,12 +19,12 @@ const debateSchema = new Schema(
         },
         format:{
             type:String,
-            enum:['Asian','British'],
+            enum:['asian','british'],
             required :true
         },
         level:{
             type:String,
-            enum:['Beginner','Intermediate','Advanced'],
+            enum:['beginner','intermediate','advanced'],
             required:true
         },
         roles:
