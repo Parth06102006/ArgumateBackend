@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {Debate} from "../models/debate.model.js";
 import { roleGenerator } from "../utils/roleGenerated.js";
+import cuid from 'cuid'
 
 const debateCreation = asyncHandler(async(req,res)=>
 {
@@ -10,15 +11,20 @@ const debateCreation = asyncHandler(async(req,res)=>
     console.log(userId)
     console.log(1)
     const {topic,format,level,role} = req.body;
+    console.log(format)
+    console.log(role)
     if([topic,format,level,role].some(t=>t?.trim() === ''))
     {
         throw new ApiError(400,'Enter all the details');
     }
     console.log(2)
-    const roles = roleGenerator(format,role);
+    const cleanedRole = role.replace(/\s*\([^)]*\)/g, '');
+
+    const roles = roleGenerator(format,cleanedRole);
+    console.log(roles)
     console.log(3)
     try {
-        const roomId = userId.toString().slice(0,5)
+        const roomId = cuid()
         const newDebate = await Debate.create({user:userId,topic,format,level,roles,roomId});
         console.log(4)
         if(!newDebate)

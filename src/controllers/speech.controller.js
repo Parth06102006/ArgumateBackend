@@ -5,12 +5,8 @@ import {Debate} from "../models/debate.model.js";
 import {Speech} from "../models/speech.model.js"
 import { io } from "../server.js";
 import axios from "axios";
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from 'ffmpeg-static';
 import fs from 'fs-extra'
 import {GoogleGenAI} from '@google/genai'
-
-ffmpeg.setFfmpegPath(ffmpegPath);
 
 const createSpeech = asyncHandler(async(req,res)=>
 {
@@ -23,7 +19,17 @@ const createSpeech = asyncHandler(async(req,res)=>
     {
         throw new ApiError(400,'No Debate exisits')
     }
-
+    const debateRoles = existingDebate.roles;
+    if(by==='user')
+    {
+      for (let i in debateRoles)
+      {
+        if((debateRoles[i].by === 'user')&&(debateRoles[i].role !== role))
+        {
+          throw new ApiError(401,'Seleted Role of User does not match the role being accessed')
+        }
+      }
+    }
     const roomId = existingDebate.roomId
 
     if(!role||!by)
@@ -127,17 +133,243 @@ const createSpeech = asyncHandler(async(req,res)=>
         await speech.save()
     }
 
-    /*io.to(roomId).emit('new_speech',
+    io.to(roomId).emit('new_speech',
         {
             by,
             role,
             content
-        }); */
+        });
 
     return res.status(200).json(new ApiResponse(200,'Speech Created Successfully',speech))
 })
 
-export const voiceToText = asyncHandler(async (req, res) => {
+const createPoiQues = asyncHandler(async(req,res)=>
+{
+    const userId = req.user;
+    const debateId = req.params.id;
+    let {question,roleFrom,roleTo}= req.body;
+
+    const existingDebate = await Debate.findById(debateId);
+    if(!existingDebate)
+    {
+        throw new ApiError(400,'No Debate exisits')
+    }
+
+    const roomId = existingDebate.roomId
+    if([question,roleFrom,roleTo].some(t=>t.trim()===''))
+    {
+        throw new ApiError(403,'Details are missing')
+    }
+
+    let speech = await Speech.findOne({user:userId,debate:debateId});
+
+    if(!speech)
+    {
+        throw new ApiError(400,'No Speech Found')
+    }
+    const debateRoles = existingDebate.roles;
+    let sender = '';
+    let receiver = ''
+    for (let i in debateRoles)
+      {
+        if((debateRoles[i].role === roleFrom))
+        {
+          sender = debateRoles[i].by
+        }
+        else if((debateRoles[i].role === roleTo))
+        {
+          receiver = debateRoles[i].by
+        }
+    }
+    console.log('Sender',sender)
+    console.log('Reciever',receiver)
+    if(!sender || !receiver)
+    {
+      throw new ApiError(400,'Sender and Receiver : Not Found')
+    }
+
+    //api to call ai to generate the poi
+      if(sender==='ai')
+        {
+          try {
+          const motion = existingDebate.topic;
+          const roleToLastResponse = speech.speeches.filter(t=>t.role === roleTo).at(-1)
+          const format = existingDebate.format;
+          if(!motion)
+          {
+            throw new ApiError(400,'Motion Not Found')
+          }
+              const prompt = `
+              You are participating in a ${format} Parliamentary Debate.
+
+              Debate Motion: "${motion}"
+
+              You are the ${roleFrom} (${sender}) and want to raise a Point of Information (POI) directed at ${roleTo} (${receiver}), who just made the following argument:
+
+              "${roleToLastResponse?.content}"
+
+              Instructions:
+              Write a short, sharp POI (1–2 sentences max). Your question should either:
+              - Challenge a contradiction or flaw in the above argument,
+              - Seek clarification that puts pressure on their position,
+              - Or force them to defend an uncomfortable consequence.
+
+              Maintain the tone and strategy expected from a formal debate.
+              Do not include filler words like “May I ask a POI?” — get straight to the point.
+              `;
+          console.log(prompt)
+          const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});
+          const response = await client.models.generateContent({
+            model:'gemini-2.5-flash',
+            contents:prompt
+          })
+          console.log(response.text)
+          question = response.text
+      }
+      catch(error)
+      {
+        throw new ApiError(400,'Unable to generate POI Question')
+      }
+    }
+    let from = {by:sender,role:roleFrom}
+    let to = {by:receiver,role:roleTo}
+
+    speech.pois.push({from,to,question})
+    await speech.save()
+
+    return res.status(200).json(new ApiResponse(200,'POI Created Successfully',speech))
+})
+
+const createPoiAns = asyncHandler(async(req,res)=>
+{
+    const userId = req.user;
+    const debateId = req.params.id;
+    let {answer,roleFrom,roleTo}= req.body;
+
+    const existingDebate = await Debate.findById(debateId);
+    if(!existingDebate)
+    {
+        throw new ApiError(400,'No Debate exisits')
+    }
+
+    const roomId = existingDebate.roomId
+
+    if([answer,roleFrom,roleTo].some(t=>t.trim()===''))
+    {
+        throw new ApiError(403,'Details are missing')
+    }
+
+    let speech = await Speech.findOne({user:userId,debate:debateId});
+
+    if(!speech)
+    {
+        throw new ApiError(400,'No Speech Found')
+    }
+    const debateRoles = existingDebate.roles;
+    let sender = '';
+    let receiver = ''
+    for (let i in debateRoles)
+      {
+        if((debateRoles[i].role === roleFrom))
+        {
+          sender = debateRoles[i].by
+        }
+        else if((debateRoles[i].role === roleTo))
+        {
+          receiver = debateRoles[i].by
+        }
+    }
+    console.log('Sender',sender)
+    console.log('Reciever',receiver)
+    if(!sender || !receiver)
+    {
+      throw new ApiError(400,'Sender and Receiver : Not Found')
+    }
+
+    let from = {by:sender,role:roleFrom}
+    let to = {by:receiver,role:roleTo}
+    console.log('Trying to find POI with:');
+    console.log('From:', sender, roleFrom);
+    console.log('To:', receiver, roleTo);
+
+    let poi = speech?.pois?.find(p =>
+        p.from.by === receiver &&
+        p.from.role === roleTo &&
+        p.to.by === sender &&
+        p.to.role === roleFrom &&
+        !p.answered
+      );
+
+    if(!poi)
+    {
+        throw new ApiError(404,'No Poi Found')
+    }
+    console.log(poi)
+    if(sender==='ai')
+        {
+          try {
+            const motion = existingDebate.topic;
+            const format = existingDebate.format;
+            if(!motion)
+              {
+                throw new ApiError(400,'Motion Not Found')
+              }
+              const toAnswer = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(roleFrom);
+              const byQuestion = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(roleTo);
+              let stance = '';
+              toAnswer && byQuestion ? stance = 'supporting' : stance = 'opposing';
+              const prompt = `
+              You are an AI debater participating in a ${format} Parliamentary Debate.
+
+              Debate Motion: "${motion}"
+              Your Role: ${roleFrom} (${stance} the motion)
+
+              You were asked the following Point of Information (POI) by ${roleTo}:
+              "${poi.question}"
+
+              Instructions:
+              Write a short, sharp, and strategic response to this POI (2–3 sentences only).
+              - Defend your position (${stance} the motion).
+              - Directly counter or expose a flaw in the POI.
+              - Maintain formal and confident tone fitting your role (${roleFrom}).
+              - If helpful, turn the POI back on the opponent.
+
+              End with a memorable or impactful line that reinforces your team's argument.
+              `;
+              
+          console.log(prompt)
+          const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});
+          const response = await client.models.generateContent({
+            model:'gemini-2.5-flash',
+            contents:prompt
+          })
+          console.log(response.text)
+          answer = response.text
+      }
+      catch(error)
+      {
+        console.error(error)
+        throw new ApiError(400,'Unable to generate POI Answer')
+      }
+    }
+
+    poi.answer = answer
+    poi.answered = true
+
+    await speech.save()
+
+
+    io.to(roomId).emit('new_poi_ans',
+        {
+            from,
+            to,
+            answer,
+        });
+
+    return res.status(200).json(new ApiResponse(200,'POI Answered Successfully',speech))
+}) 
+
+const voiceToText = asyncHandler(async (req, res) => {
   try {
     const filePath = req.file.path;
     const apiKey = process.env.SPEECH_TO_TEXT_API_KEY;
@@ -195,105 +427,7 @@ export const voiceToText = asyncHandler(async (req, res) => {
   }
 });
 
-const createPoiQues = asyncHandler(async(req,res)=>
-{
-    const userId = req.user;
-    const debateId = req.params.id;
-    const {question,roleFrom,roleTo,sender,receiver}= req.body;
-
-    const existingDebate = await Debate.findById(debateId);
-    if(!existingDebate)
-    {
-        throw new ApiError(400,'No Debate exisits')
-    }
-
-    const roomId = existingDebate.roomId
-
-    if([question,roleFrom,roleTo,sender,receiver].some(t=>t.trim()===''))
-    {
-        throw new ApiError(403,'Details are missing')
-    }
-
-    let speech = await Speech.findOne({user:userId,debate:debateId});
-
-    if(!speech)
-    {
-        throw new ApiError(400,'No Speech Found')
-    }
-
-    //api to call ai to generate the poi
-    if(by==='ai')
-    {
-        const response = await axios.post();
-        
-    }
-    let from = {by:sender,role:roleFrom}
-    let to = {by:receiver,role:roleTo}
-
-    speech.pois.push({from,to,question})
-    await speech.save()
-
-    return res.status(200).json(new ApiResponse(200,'POI Created Successfully',speech))
-})
-
-const createPoiAns = asyncHandler(async(req,res)=>
-{
-    const userId = req.user;
-    const debateId = req.params.id;
-    const {answer,roleFrom,roleTo,sender,receiver}= req.body;
-
-    const existingDebate = await Debate.findById(debateId);
-    if(!existingDebate)
-    {
-        throw new ApiError(400,'No Debate exisits')
-    }
-
-    const roomId = existingDebate.roomId
-
-    if([answer,roleFrom,roleTo,sender,receiver].some(t=>t.trim()===''))
-    {
-        throw new ApiError(403,'Details are missing')
-    }
-
-    let speech = await Speech.findOne({user:userId,debate:debateId});
-
-    if(!speech)
-    {
-        throw new ApiError(400,'No Speech Found')
-    }
-
-    //api to call ai to generate the poi
-    if(by==='ai')
-    {
-        const response = await axios.post();   
-    }
-    
-    let from = {by:sender,role:roleFrom}
-    let to = {by:receiver,role:roleTo}
-
-    let poi = speech.pois.find(p=> p.from.by === sender && p.to.by === receiver && !p.answered)
-    if(!poi)
-    {
-        throw new ApiError('No Poi Found')
-    }
-
-    poi.answer = answer
-    poi.answered = true
-
-    await speech.save()
-
-
-    io.to(roomId).emit('new_poi_ans',
-        {
-            from,
-            to,
-            answer,
-        });
-
-    return res.status(200).json(new ApiResponse(200,'POI Answered Successfully',speech))
-}) 
-
-export const conclusion = asyncHandler(async(req,res)=>{
+const sentimentalAnalysis = asyncHandler(async(req,res)=>{
   const {data} = req.body;
   console.log(data)
   const response = await fetch(
@@ -327,7 +461,7 @@ export const conclusion = asyncHandler(async(req,res)=>{
 	return res.json(new ApiResponse(200,'Sentimental Analysis Completed',{result:emotion}));
 })
 
-export const topicClassifcation = asyncHandler(async(req,res)=>
+const topicClassifcation = asyncHandler(async(req,res)=>
 {
     const userId = req.user;
     const debateId = req.params.id;
@@ -382,4 +516,4 @@ export const topicClassifcation = asyncHandler(async(req,res)=>
     }
 })
 
-export {createSpeech,createPoiQues,createPoiAns};
+export {createSpeech,createPoiQues,createPoiAns,voiceToText,sentimentalAnalysis,topicClassifcation};

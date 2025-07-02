@@ -10,6 +10,8 @@ const debateSchema = new Schema(
         roomId:{
             type:String,
             trim:true,
+            unique: true,
+            trim: true,
         },
         topic:{
             type:String,
