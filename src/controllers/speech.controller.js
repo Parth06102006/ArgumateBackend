@@ -31,85 +31,95 @@ const createSpeech = asyncHandler(async(req,res)=>
       }
     }
     const roomId = existingDebate.roomId
-
+    console.log(userId)
+    console.log(debateId)
     if(!role||!by)
     {
         throw new ApiError(403,'Details are missing')
     }
-
     let speech = await Speech.findOne({user:userId,debate:debateId});
-    let topic='';
+    console.log(speech)
     if(by==='ai')
     {
     try {
-    // const motion = speech.speeches.at(-1)?.content;
     const motion = existingDebate.topic;
-    const lastResponse = speech.speeches.at(-1)
-    const prevRole = lastResponse.role;
-    const prevMessage = lastResponse.content
-    const format = existingDebate.format;
+    console.log(motion)
     if(!motion)
     {
       throw new ApiError(400,'Motion Not Found')
     }
-    const isOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(role);
-    const prevIsOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(prevRole);
-    const sameSide = isOpposition === prevIsOpposition;
 
+    const isOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(role);
     let stance = '';
     isOpposition ? stance='opposing' : stance = 'supporting'
+    const format = existingDebate.format;
+    
     let prompt = ''
-
-    if(sameSide)
-    {
+    if (!speech || speech.speeches.length === 0) {
       prompt = `
         You are an AI participating in a ${format} Parliamentary Debate.
 
         Debate Motion: "${motion}"
         Your Role: ${role} (${stance} the motion)
 
-        Previous Speaker: ${prevRole}
-        Their Argument: "${prevMessage}"
-
         Instructions:
-        You are on the same side as the previous speaker. Build upon and extend their argument in a persuasive 50-word speech.
-        - Deepen the logic or add a new dimension.
-        - Reinforce your side’s stance (${stance} the motion).
-        - Maintain the tone and strategy of your role (${role}).
-        - End with an impactful call or thought.
-        `;
-
+        You are the first speaker from your side. Write a 60–80 word opening speech.
+        - Clearly state your stance (${stance} the motion)
+        - Define important terms if needed
+        - Introduce your team's core arguments
+        - Set a confident, formal tone appropriate for your role (${role})
+        - End with a strategic preview of what your team will prove
+      `;
+      console.log(prompt)
     }
     else
     {
-      prompt = `
+      const prevIsOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(prevRole);
+      const lastResponse = speech.speeches.at(-1)
+      const prevRole = lastResponse.role;
+      const prevMessage = lastResponse.content
+      const sameSide = isOpposition === prevIsOpposition;
+      
+      if(sameSide)
+      {
+        prompt = `
           You are an AI participating in a ${format} Parliamentary Debate.
-
+  
           Debate Motion: "${motion}"
           Your Role: ${role} (${stance} the motion)
-
+  
           Previous Speaker: ${prevRole}
           Their Argument: "${prevMessage}"
-
+  
           Instructions:
-          Respond to the previous speaker from the opposite bench. Write a persuasive, 50-word rebuttal speech.
-          - Refute key claims.
-          - Present your side's perspective (${stance} the motion).
-          - Stay formal, sharp, and role-specific.
-          - End with a strong closing line or rhetorical question.`;
-    }
-      console.log(prompt)
-    /* const response = await axios.post('https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta',{ inputs: prompt , motion ,role},
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.HF_API_TOKEN}`,
-          'Content-Type': "application/json"
-        }
+          You are on the same side as the previous speaker. Build upon and extend their argument in a persuasive 50-word speech.
+          - Deepen the logic or add a new dimension.
+          - Reinforce your side’s stance (${stance} the motion).
+          - Maintain the tone and strategy of your role (${role}).
+          - End with an impactful call or thought.
+          `;
+  
       }
-    );
-    console.log(response)
-    const resp2 = response.data[0]?.generated_text || "(No response)";
-    console.log(resp2) */
+      else
+      {
+        prompt = `
+            You are an AI participating in a ${format} Parliamentary Debate.
+  
+            Debate Motion: "${motion}"
+            Your Role: ${role} (${stance} the motion)
+  
+            Previous Speaker: ${prevRole}
+            Their Argument: "${prevMessage}"
+  
+            Instructions:
+            Respond to the previous speaker from the opposite bench. Write a persuasive, 50-word rebuttal speech.
+            - Refute key claims.
+            - Present your side's perspective (${stance} the motion).
+            - Stay formal, sharp, and role-specific.
+            - End with a strong closing line or rhetorical question.`;
+      }
+    }
+    console.log(prompt)
     const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});
     const response = await client.models.generateContent({
       model:'gemini-2.5-flash',
