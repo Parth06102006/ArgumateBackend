@@ -27,7 +27,7 @@ const io = new Server(server,
     }
 }
 );
-console.log('Frontend Link',process.env.FRONTEND_URL)
+
 io.on('connection',(socket)=>{
     console.log('a user connected');
 
