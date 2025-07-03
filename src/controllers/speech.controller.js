@@ -74,10 +74,10 @@ const createSpeech = asyncHandler(async(req,res)=>
     }
     else
     {
-      const prevIsOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(prevRole);
       const lastResponse = speech.speeches.at(-1)
       const prevRole = lastResponse.role;
       const prevMessage = lastResponse.content
+      const prevIsOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(prevRole);
       const sameSide = isOpposition === prevIsOpposition;
       
       if(sameSide)
@@ -383,7 +383,6 @@ const voiceToText = asyncHandler(async (req, res) => {
   try {
     const filePath = req.file.path;
     const apiKey = process.env.SPEECH_TO_TEXT_API_KEY;
-
     // 1. Upload the audio to AssemblyAI
     const uploadResponse = await axios({
       method: "post",
