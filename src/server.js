@@ -6,6 +6,7 @@ import userRouter from './routes/user.route.js'
 import debateRouter from './routes/debate.route.js'
 import speechRouter from './routes/speech.route.js'
 import scoreRouter from './routes/score.route.js'
+import notesRouter from './routes/notes.route.js'
 import { errorHandling } from './middlewares/error.middleware.js';
 import dotenv from 'dotenv'
 import cors from 'cors'
@@ -56,6 +57,7 @@ app.use('/api/v1',userRouter);
 app.use('/api/v1',debateRouter);
 app.use('/api/v1',speechRouter);
 app.use('/api/v1',scoreRouter);
+app.use('/api/v1',notesRouter)
 app.use(errorHandling)
 export {io}
 

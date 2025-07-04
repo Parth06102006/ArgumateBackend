@@ -3,11 +3,11 @@ function roleGenerator(format,chosenRole)
     let allRoles = []
     if(format==='asian')
     {
-        allRoles = ["Prime Minister","Deputy Prime Minister","Government Whip","Leader of Opposition","Deputy Leader of Opposition","Opposition Whip"]
-    }
+        allRoles = ["Prime Minister","Leader of Opposition","Deputy Prime Minister","Deputy Leader of Opposition","Government Whip","Opposition Whip"]
+    } 
     else if(format==='british')
     {
-        allRoles = ["Opening Government","Closing Government","Opening Opposition","Closing Opposition"]
+        allRoles = ["Opening Government","Opening Opposition","Closing Government","Closing Opposition"]
     }
 
     let roles = [];

@@ -13,7 +13,7 @@ const createSpeech = asyncHandler(async(req,res)=>
     const userId = req.user;
     const debateId = req.params.id;
     let {content,role,by} = req.body;
-
+    
     const existingDebate = await Debate.findById(debateId);
     if(!existingDebate)
     {
@@ -33,6 +33,8 @@ const createSpeech = asyncHandler(async(req,res)=>
     const roomId = existingDebate.roomId
     console.log(userId)
     console.log(debateId)
+    console.log(role)
+    console.log(by)
     if(!role||!by)
     {
         throw new ApiError(403,'Details are missing')

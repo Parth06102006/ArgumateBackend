@@ -115,7 +115,7 @@ const scoreCalculate = asyncHandler(async(req,res)=>
                 }
                 else
                 {
-                    score = await Score.findByIdAndUpdate(score._id,{...jsonData})
+                    score = await Score.findByIdAndUpdate(score._id,{...jsonData},{new:true})
                 } 
             return res.status(200).json(new ApiResponse(200,'Score Calculated Successfully',{score}))
         } catch (error) {
