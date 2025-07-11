@@ -73,14 +73,12 @@ const getDebateTopics = asyncHandler(async (req, res) => {
 
     if (!existingDebates.length) {
         throw new ApiError(400, 'No Existing Debate found');
-    }
-
-    const topics = existingDebates.map(debate => debate.topic);
+    };
 
     return res.status(200).json({
         success: true,
         message: 'Successfully fetched the debate topics for the user',
-        topics,
+        topics:existingDebates,
     });
 });
 

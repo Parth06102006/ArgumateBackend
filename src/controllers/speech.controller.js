@@ -549,6 +549,7 @@ const topicClassifcation = asyncHandler(async(req,res)=>
 const getSpeeches = asyncHandler(async(req,res)=>{
   const userId = req.user;
   const debateId = req.params.id;
+  console.log(debateId)
   if(!debateId)
   {
     throw new ApiError(403,'Debate Id not found')
@@ -558,8 +559,9 @@ const getSpeeches = asyncHandler(async(req,res)=>{
   {
     throw new ApiError(400,'No Existing Debate Found')
   }
-  const speech = await Speech.findOne({user:userId,debate:debateId}).select('-user');
-
+  console.log(existingDebate)
+  const speech = await Speech.findOne({user:userId,debate:debateId});
+  console.log(speech)
   if(!speech)
   {
       throw new ApiError(400,'No Speech Found')
