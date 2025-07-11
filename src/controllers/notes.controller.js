@@ -99,7 +99,7 @@ const notesAnalyzer = asyncHandler(async(req,res)=>{
                 }
 
                 try {
-                const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});
+                const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY_2});
                 const response = await client.models.generateContent({
                         model:'gemini-2.5-flash',
                         contents:message,

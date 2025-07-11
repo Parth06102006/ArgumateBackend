@@ -122,7 +122,7 @@ const createSpeech = asyncHandler(async(req,res)=>
       }
     }
     console.log(prompt)
-    const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});
+    const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY_2});
     const response = await client.models.generateContent({
       model:'gemini-2.5-flash',
       contents:prompt
@@ -160,18 +160,39 @@ const createPoiQues = asyncHandler(async(req,res)=>
     const userId = req.user;
     const debateId = req.params.id;
     let {question,roleFrom,roleTo}= req.body;
-
+    console.log(question)
+    console.log(roleFrom)
+    console.log(roleTo)
+  
     const existingDebate = await Debate.findById(debateId);
     if(!existingDebate)
     {
         throw new ApiError(400,'No Debate exisits')
     }
-
-    const roomId = existingDebate.roomId
-    if([question,roleFrom,roleTo].some(t=>t.trim()===''))
-    {
+    const debateRoles = existingDebate.roles;
+      let userRole = '';
+      for (let i in debateRoles)
+      {
+        if((debateRoles[i].by === 'user'))
+        {
+          userRole = debateRoles[i].role
+          break;
+        }
+      }
+      if(!roleFrom || !roleTo)
+      {
         throw new ApiError(403,'Details are missing')
-    }
+      }
+
+      if(roleFrom === userRole)
+      {
+          if(!question)
+          {
+            throw new ApiError(403,'Question is not  present')
+          }
+      }
+    const roomId = existingDebate.roomId
+    
 
     let speech = await Speech.findOne({user:userId,debate:debateId});
 
@@ -179,9 +200,9 @@ const createPoiQues = asyncHandler(async(req,res)=>
     {
         throw new ApiError(400,'No Speech Found')
     }
-    const debateRoles = existingDebate.roles;
     let sender = '';
     let receiver = ''
+    console.log(debateRoles)
     for (let i in debateRoles)
       {
         if((debateRoles[i].role === roleFrom))
@@ -201,7 +222,7 @@ const createPoiQues = asyncHandler(async(req,res)=>
     }
 
     //api to call ai to generate the poi
-      if(sender==='ai')
+      if(sender==='ai' &&(!question || question === '.'))
         {
           try {
           const motion = existingDebate.topic;
@@ -230,7 +251,8 @@ const createPoiQues = asyncHandler(async(req,res)=>
               Do not include filler words like “May I ask a POI?” — get straight to the point.
               `;
           console.log(prompt)
-          const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});
+          console.log('***************************Q*U*E*S*T*I*O*N*I*N*G**************************************')
+          const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY_2});
           const response = await client.models.generateContent({
             model:'gemini-2.5-flash',
             contents:prompt
@@ -240,6 +262,7 @@ const createPoiQues = asyncHandler(async(req,res)=>
       }
       catch(error)
       {
+        console.error(error.message)
         throw new ApiError(400,'Unable to generate POI Question')
       }
     }
@@ -317,7 +340,8 @@ const createPoiAns = asyncHandler(async(req,res)=>
         throw new ApiError(404,'No Poi Found')
     }
     console.log(poi)
-    if(sender==='ai')
+
+    if(sender==='ai'&& (!answer || answer === '.'))
         {
           try {
             const motion = existingDebate.topic;
@@ -350,7 +374,8 @@ const createPoiAns = asyncHandler(async(req,res)=>
               `;
               
           console.log(prompt)
-          const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY});
+          console.log('***************************A*N*S*W*E*R*I*N*G**************************************')
+          const client = new GoogleGenAI({apiKey:process.env.GEMINI_API_KEY_2});
           const response = await client.models.generateContent({
             model:'gemini-2.5-flash',
             contents:prompt
@@ -369,15 +394,9 @@ const createPoiAns = asyncHandler(async(req,res)=>
     poi.answered = true
 
     await speech.save()
-
-
-    io.to(roomId).emit('new_poi_ans',
-        {
-            from,
-            to,
-            answer,
-        });
-
+    console.log('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+    console.log('sending response of success')
+    console.log('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
     return res.status(200).json(new ApiResponse(200,'POI Answered Successfully',speech))
 }) 
 
