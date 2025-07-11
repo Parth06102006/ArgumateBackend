@@ -42,4 +42,47 @@ const debateCreation = asyncHandler(async(req,res)=>
     }
 })
 
-export {debateCreation}
+const restartDebate = asyncHandler(async(req,res)=>{
+    const userId = req.user;
+    console.log(userId)
+    console.log(1)
+    const {topic} = req.body;
+    if(!topic)
+    {
+        throw new ApiError(400,'Enter the Topic');
+    }
+    try {
+        const existingDebate = await Debate.findOne({user:userId,topic});
+        if(!existingDebate)
+        {
+            throw new ApiError(400,`Error finding the Debate with topic:${topic}`);
+        }
+        
+        return res.status(200).json(new ApiResponse(200,'Debate Restarted',{debate:existingDebate}));
+
+    } catch (error) {
+        console.error(error);
+        throw new ApiError(500,'Error Starting a new Debate');
+    }
+})
+
+const getDebateTopics = asyncHandler(async (req, res) => {
+    const userId = req.user;
+
+    const existingDebates = await Debate.find({ user: userId });
+
+    if (!existingDebates.length) {
+        throw new ApiError(400, 'No Existing Debate found');
+    }
+
+    const topics = existingDebates.map(debate => debate.topic);
+
+    return res.status(200).json({
+        success: true,
+        message: 'Successfully fetched the debate topics for the user',
+        topics,
+    });
+});
+
+
+export {debateCreation,restartDebate,getDebateTopics}

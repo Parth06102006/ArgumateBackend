@@ -546,4 +546,26 @@ const topicClassifcation = asyncHandler(async(req,res)=>
     }
 })
 
-export {createSpeech,createPoiQues,createPoiAns,voiceToText,sentimentalAnalysis,topicClassifcation};
+const getSpeeches = asyncHandler(async(req,res)=>{
+  const userId = req.user;
+  const debateId = req.params.id;
+  if(!debateId)
+  {
+    throw new ApiError(403,'Debate Id not found')
+  }
+  const existingDebate = await Debate.findById(debateId)
+  if(!existingDebate)
+  {
+    throw new ApiError(400,'No Existing Debate Found')
+  }
+  const speech = await Speech.findOne({user:userId,debate:debateId}).select('-user');
+
+  if(!speech)
+  {
+      throw new ApiError(400,'No Speech Found')
+  }
+
+  return res.status(200).json(new ApiResponse(200,'Speeches and POI fetched Successfully',{speeches:speech.speeches,pois:speech.pois}))
+})
+
+export {createSpeech,createPoiQues,createPoiAns,voiceToText,sentimentalAnalysis,topicClassifcation,getSpeeches};
