@@ -30,6 +30,7 @@ const scoreCalculate = asyncHandler(async(req,res)=>
         console.log(userRole)
         const role = userRole.role;
         const motion = existingDebate.topic
+        const level = existingDebate.level;
         const combinedSpeechContent = `
             Main Speech: "${userSpeeches?.map(s => s.content).join(" ")}"
 
