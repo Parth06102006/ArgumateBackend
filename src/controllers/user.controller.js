@@ -3,8 +3,10 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 import bcrypt from 'bcryptjs'
+import axios from "axios";
 
 const signup = asyncHandler(async(req,res)=>{
+    console.log('start')
     const {username,email,password} = req.body;
     if([username,email,password].some(t=>t?.trim() === ''))
     {
@@ -15,6 +17,11 @@ const signup = asyncHandler(async(req,res)=>{
     if(existingUser)
     {
         throw new ApiError(403,'User has already signed up')
+    }
+    const email_response = await axios.get(`https://api.hunter.io/v2/email-verifier?email=${email}&api_key=${process.env.EMAIL_CHECKER_API_KEY}`)
+    if(email_response.data.data.status === 'invalid')
+    {
+        throw new ApiError(404,'Invalid EmailID')
     }
 
     //hash the password
