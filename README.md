@@ -17,12 +17,6 @@
 - 🗣️ Role-based response generation for **British** and **Asian Parliamentary** debate styles
 - ✉️ Email verification using **Zoho Mail + Nodemailer**
 - ✅ Email validity checking via **Hunter.io API**
-- 🔧 Backend routes:
-  - `getTopics`
-  - `restartDebate`
-  - `sentimentAnalysis`
-  - `emotionalAnalysis`
-  - ...and more
 
 ---
 
@@ -44,6 +38,12 @@
 ---
 
 ## 🧠 AI Capabilities Implemented
+- **Argument mining**: Identifying claims, evidence, and rebuttals in real-time
+- **Sentiment analysis**: Understanding emotional tone of the speaker
+- **Emotion detection**: Classifying emotional states expressed in speech
+- **Topic classification**: Mapping inputs to relevant debate motions
+- **Summarization**: Concise reformulation of verbose or unclear inputs
+- **Natural language generation**: Generating responses based on debate roles and logic
 
 - **Argument mining**: Identifying claims, evidence, and rebuttals in real-time
 - **Sentiment analysis**: Understanding emotional tone of the speaker
