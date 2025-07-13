@@ -7,7 +7,7 @@ function roleGenerator(format,chosenRole)
     } 
     else if(format==='british')
     {
-        allRoles = ["Opening Government","Opening Opposition","Closing Government","Closing Opposition"]
+        allRoles = ["Prime Minister","Deputy Prime Minister","Leader of Opposition","Deputy Leader of Opposition","Member of Government","Government Whip","Member of Opposition","Opposition Whip"]
     }
 
     let roles = [];

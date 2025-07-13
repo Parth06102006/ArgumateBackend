@@ -51,7 +51,7 @@ const createSpeech = asyncHandler(async(req,res)=>
       throw new ApiError(400,'Motion Not Found')
     }
 
-    const isOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(role);
+    const isOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Member of Opposition"].includes(role);
     let stance = '';
     isOpposition ? stance='opposing' : stance = 'supporting'
     const format = existingDebate.format;
@@ -79,7 +79,7 @@ const createSpeech = asyncHandler(async(req,res)=>
       const lastResponse = speech.speeches.at(-1)
       const prevRole = lastResponse.role;
       const prevMessage = lastResponse.content
-      const prevIsOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(prevRole);
+      const prevIsOpposition = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Member of Opposition"].includes(prevRole);
       const sameSide = isOpposition === prevIsOpposition;
       
       if(sameSide)
@@ -350,8 +350,8 @@ const createPoiAns = asyncHandler(async(req,res)=>
               {
                 throw new ApiError(400,'Motion Not Found')
               }
-              const toAnswer = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(roleFrom);
-              const byQuestion = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Opening Opposition", "Closing Opposition"].includes(roleTo);
+              const toAnswer =["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Member of Opposition"].includes(roleFrom);
+              const byQuestion = ["Leader of Opposition", "Deputy Leader of Opposition", "Opposition Whip", "Member of Opposition"].includes(roleTo);
               let stance = '';
               toAnswer && byQuestion ? stance = 'supporting' : stance = 'opposing';
               const prompt = `
